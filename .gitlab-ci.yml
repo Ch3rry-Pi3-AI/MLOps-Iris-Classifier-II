@@ -42,20 +42,26 @@ build_docker_image:
     - rm -f key.json
 
 deploy_to_gke:
-  image: google/cloud-sdk:latest
+  image: google/cloud-sdk:485.0.0
   stage: deploy
+  variables:
+    NAMESPACE: "default"
   before_script:
     - echo "$GCP_SA_KEY" | base64 -d > key.json
     - gcloud auth activate-service-account --key-file=key.json
     - gcloud config set project $PROJECT_ID
-    # Ensure kubectl & GKE auth plugin are present (no-ops if already included)
-    - gcloud components install kubectl gke-gcloud-auth-plugin -q || true
     - gcloud container clusters get-credentials $CLUSTER --region $REGION --project $PROJECT_ID
-    - export IMAGE_SHA_TAG=$REGISTRY/$PROJECT_ID/$REPO/mlops-iris-ii:$CI_COMMIT_SHORT_SHA
+    - export IMAGE_SHA_TAG="$REGISTRY/$PROJECT_ID/$REPO/mlops-iris-ii:$CI_COMMIT_SHORT_SHA"
   script:
-    # Option 1 (recommended): update the image on the live Deployment without editing YAML
-    - kubectl set image deployment/mlops-iris-ii mlops-iris-ii="$IMAGE_SHA_TAG"
-    # Option 2: if you want to apply the YAML as-is (it uses :latest), just:
-    # - kubectl apply -f kubernetes-deployment.yaml
+    # Create/refresh Deployment and Service from your manifest
+    - kubectl apply -f kubernetes-deployment.yaml -n "$NAMESPACE"
+
+    # Overwrite the image with the commit-specific tag for deterministic rollouts
+    - kubectl set image -n "$NAMESPACE" deployment/mlops-iris-ii mlops-iris-ii="$IMAGE_SHA_TAG" --record=true
+
+    # Quick visibility + rollout confirmation
+    - kubectl get deploy,svc -n "$NAMESPACE"
+    - kubectl rollout status deployment/mlops-iris-ii -n "$NAMESPACE" --timeout=180s
   after_script:
     - rm -f key.json
+
