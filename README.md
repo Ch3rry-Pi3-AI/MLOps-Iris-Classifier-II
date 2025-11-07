@@ -1,88 +1,124 @@
-# 🦊 **GitLab Integration — MLOps Iris Classifier**
+# ☁️ **Google Cloud Platform (GCP) Setup — MLOps Iris Classifier**
 
-This stage introduces **GitLab integration** for the **MLOps Iris Classifier** project, allowing the repository to be mirrored and maintained across **both GitHub and GitLab**.
-While GitHub remains excellent for open collaboration and ecosystem integration, GitLab offers additional advantages for **CI/CD automation**, **repository management**, and **self-hosted DevOps flexibility**.
+This stage introduces **Google Cloud Platform (GCP)** configuration for the **MLOps Iris Classifier** project.
+The setup prepares the cloud infrastructure necessary for deploying containerised applications and machine learning workflows using **Kubernetes (GKE)**, **Artifact Registry**, and **Service Accounts** with secure IAM permissions.
 
-Using both platforms in parallel provides redundancy and freedom — combining GitHub’s developer community with GitLab’s advanced pipeline control.
+By completing this setup, your environment will be ready to build, store, and deploy Docker containers directly from your CI/CD pipelines (such as CircleCI or GitLab CI) into **GKE Autopilot** within the **us-central1 (Iowa)** region.
 
-## 💡 Why Use GitLab (in Addition to GitHub)
+## 🌐 **Overview**
 
-| Feature                    | GitHub                                                        | GitLab                                                            |
-| :------------------------- | :------------------------------------------------------------ | :---------------------------------------------------------------- |
-| **CI/CD Integration**      | Requires external setup (e.g., GitHub Actions YAML workflows) | Built-in GitLab CI/CD with integrated runners                     |
-| **Repository Visibility**  | Excellent for public, open-source collaboration               | Great for private or enterprise projects                          |
-| **Permissions & Security** | Simple but limited for complex org setups                     | Fine-grained roles and access control                             |
-| **DevOps Scope**           | Primarily source control & Actions                            | Complete DevOps lifecycle (Plan → Code → Test → Deploy → Monitor) |
-| **Self-Hosting Option**    | Available only via GitHub Enterprise                          | Fully supported via GitLab Community/Enterprise editions          |
+This GCP configuration involves five key steps:
 
-By linking this project to GitLab as well, future branches can easily integrate **GitLab pipelines**, **container registry support**, and **deployment automation** alongside GitHub’s existing workflow.
+1. Enabling the required APIs
+2. Creating an Artifact Registry repository
+3. Setting up a Service Account and JSON key
+4. Creating a Kubernetes Autopilot cluster
+5. Ensuring consistent region and network configuration
 
-## 🧩 Step-by-Step GitLab Setup
+Each step ensures the environment is secure, aligned, and ready for MLOps deployment.
 
-### 1️⃣ Create or Log In to GitLab
+## 1️⃣ Enable Required APIs
 
-Go to [https://gitlab.com](https://gitlab.com) and **sign up or log in**.
+Go to your [Google Cloud Console](https://console.cloud.google.com) and open the **Navigation Menu → APIs & Services → Library**.
 
-<p align="center">
-  <img src="img/gitlab/create_project.png" alt="GitLab Create Project" style="width:90%; max-width:720px; height:auto;"/>
-</p>
+Use the search bar to confirm that the following APIs are **enabled**:
 
-### 2️⃣ Create a New Project
+* Kubernetes Engine API
+* Google Container Registry API
+* Compute Engine API
+* Identity and Access Management (IAM) API
+* Cloud Build API
+* Cloud Storage API
 
-On the dashboard, click **“New Project”** and choose **Global** setup rather than **Local**.
-
-<p align="center">
-  <img src="img/gitlab/global_setup.png" alt="Global vs Local Setup" style="width:90%; max-width:720px; height:auto;"/>
-</p>
-
-### 3️⃣ Configure Global Git Identity
-
-In your project root terminal, configure your global Git identity (if not already done):
-
-```bash
-git config --global user.name "Roger Campbell"
-git config --global user.email "the_rfc@hotmail.co.uk"
-```
-
-### 4️⃣ Copy the Git Remote Command
-
-On the “Push an existing folder” screen, locate the section titled **Configure the Git repository**.
-Copy the `git remote add origin …` command provided there.
+When an API is correctly enabled (for example, *Kubernetes Engine API*), you should see a confirmation like this:
 
 <p align="center">
-  <img src="img/gitlab/add_remote.png" alt="Add GitLab Remote" style="width:90%; max-width:720px; height:auto;"/>
+  <img src="img/gcp/api_enabled.png" alt="GCP API Enabled Example" style="width:100%; max-width:720px; height:auto;"/>
 </p>
 
-### 5️⃣ Add GitLab Remote (Alongside GitHub)
+## 2️⃣ Create an Artifact Registry Repository
 
-If this project is already connected to GitHub, simply give the new remote a different name:
+Return to the GCP landing page and **search for “Artifact Registry”**.
+Click **+ Create Repository** and complete the following fields:
 
-```bash
-git remote add gitlab https://gitlab.com/Ch3rry-Pi3/mlops-iris-classifier-ii.git
-```
+* **Repository name:** `mlops-iris-ii`
+* **Region:** `us-central1 (Iowa)`
+* Keep all other settings as default.
+* Scroll to the bottom and click **Create**.
 
-This means:
+<p align="center">
+  <img src="img/gcp/create_repo.png" alt="Create GCP Artifact Registry Repository" style="width:100%; max-width:720px; height:auto;"/>
+</p>
 
-* `origin` → GitHub
-* `gitlab` → GitLab
+This repository will store Docker images and related artefacts used in deployment.
 
-### 6️⃣ Pushing to GitLab
+## 3️⃣ Create a Service Account
 
-To push your latest branch (for example, `main` or `05_cicd`) to GitLab:
+Return to the **Navigation Menu → IAM & Admin → Service Accounts**.
+Click **+ Create Service Account** and name it `mlops-iris-ii`.
 
-```bash
-git push gitlab main
-```
+Under **Permissions (optional)**, assign the following permissions:
 
-All regular commands like `git add .` and `git commit -m "message"` will work as usual — you only specify the target remote when pushing.
+<p align="center">
+  <img src="img/gcp/permissions.png" alt="Assign IAM Permissions" style="width:100%; max-width:720px; height:auto;"/>
+</p>
 
-## ✅ In Summary
+Click **Create**. Once complete, you will see your new service account listed.
 
-By integrating GitLab:
+Next, click the **Actions** button (on the far right of the row) and choose **Manage Keys**.
+Select **Add Key → Create new key**, then choose **JSON** as the key type.
 
-* You maintain a **redundant repository** for added resilience.
-* You gain access to **built-in CI/CD pipelines** and **registry management**.
-* You retain the **GitHub link** for open collaboration and visibility.
-* The project remains **fully synchronised** across both platforms with minimal extra effort.
+<p align="center">
+  <img src="img/gcp/create_key.png" alt="Create Service Account Key" style="width:100%; max-width:720px; height:auto;"/>
+</p>
 
-This dual-remote setup establishes a robust foundation for future **GitLab CI/CD automation**, complementing the existing **CircleCI integration** and extending the project’s overall DevOps capability.
+Click **Create** to download your JSON key file.
+This file will be used later to authenticate your cloud resources and pipelines.
+
+## 4️⃣ Create a Kubernetes Autopilot Cluster
+
+Return to the GCP landing page and search for **Kubernetes Engine**.
+From the left-hand pane, select **Clusters**.
+
+<p align="center">
+  <img src="img/gcp/cluster.png" alt="Kubernetes Engine Clusters" style="width:100%; max-width:720px; height:auto;"/>
+</p>
+
+Click **Create Cluster**.
+When prompted, select the **Autopilot** mode (the default option):
+
+<p align="center">
+  <img src="img/gcp/autopilot_cluster.png" alt="Autopilot Cluster Option" style="width:100%; max-width:720px; height:auto;"/>
+</p>
+
+In the **Cluster basics** section, keep the defaults:
+
+* **Cluster name:** `autopilot-cluster-1`
+* **Region:** `us-central1` (must match your Artifact Registry region)
+
+Leave **Fleet Registration** settings unchanged.
+
+In the **Networking** section, ensure both of the following are selected:
+
+* **Access using DNS**
+* **Access using IPv4 addresses**
+
+<p align="center">
+  <img src="img/gcp/networking.png" alt="Kubernetes Networking Configuration" style="width:100%; max-width:720px; height:auto;"/>
+</p>
+
+Keep the **Advanced settings** as default and click **Create**.
+
+The cluster creation process will take several minutes.
+Wait until it is fully provisioned before proceeding to any deployment or pipeline integration.
+
+## ✅ **In Summary**
+
+At the end of this stage:
+
+* All essential GCP APIs are active.
+* A secure **Artifact Registry** repository (`mlops-iris-ii`) has been created.
+* A **Service Account** with JSON credentials is available for authentication.
+* A fully managed **Autopilot Kubernetes cluster** (`autopilot-cluster-1`) has been provisioned in `us-central1`.
+
+This setup completes the cloud infrastructure foundation for the **MLOps Iris Classifier** project and prepares it for container deployment, CI/CD integration, and future scalability across GCP services.
