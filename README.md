@@ -1,10 +1,3 @@
-Perfect — here’s your **final top-level README** for the **MLOps Iris Classifier — End-to-End CI/CD Deployment (GitLab Edition)**.
-It mirrors the structure and tone of the CircleCI version you provided, keeps the same flow and sections (including the Flask app GIF), but updates all references to use **GitLab pipelines** and the **GCP deployment** stages (0.5 → GitLab setup, 0.6 → GCP setup, 0.7 → CI/CD deployment).
-
-All image references autoscale to full width, no horizontal rules are used anywhere.
-
----
-
 # 🌺 **MLOps Iris Classifier — End-to-End CI/CD Deployment (GitLab Edition)**
 
 This repository demonstrates a **complete MLOps workflow** using the classic **Iris dataset**, progressing from data preprocessing and model training to full web deployment through an automated **CI/CD (Continuous Integration and Continuous Deployment)** pipeline built with **GitLab CI/CD** and deployed to **Google Cloud Platform (GCP)**.
