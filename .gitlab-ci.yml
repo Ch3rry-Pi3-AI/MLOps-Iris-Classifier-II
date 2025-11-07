@@ -1,10 +1,14 @@
-image: google/cloud-sdk:latest
-
+# -------------------------------------------------------------------
+# GitLab CI/CD — Build & Deploy to GKE (MLOps Iris Classifier)
+# -------------------------------------------------------------------
 stages:
   - checkout
   - build
   - deploy
 
+# -------------------------------------------------------------------
+# Global variables (project, region, registry, cluster)
+# -------------------------------------------------------------------
 variables:
   PROJECT_ID: "sacred-garden-474511-b9"
   REGION: "us-central1"
@@ -12,33 +16,76 @@ variables:
   REGISTRY: "us-central1-docker.pkg.dev"
   CLUSTER: "autopilot-cluster-1"
 
+# -------------------------------------------------------------------
+# Stage: checkout — placeholder to mirror typical pipelines
+# -------------------------------------------------------------------
 checkout_code:
+  image: alpine:3.20
   stage: checkout
   script:
-    - echo "Code Checked out.."
+    - echo "Code checked out."
 
+# -------------------------------------------------------------------
+# Stage: build — Docker-in-Docker to build and push container image
+# -------------------------------------------------------------------
+# Uses docker:dind as a service (daemon) and docker CLI in the job image.
+# Authenticates to Artifact Registry using a JSON service account key
+# passed in via the masked CI variable GCP_SA_KEY (base64-encoded).
 build_docker_image:
+  image: docker:24.0.9
   stage: build
   services:
-    - name: docker:dind
-      command: ["--tls=false"]
+    - name: docker:24.0.9-dind
+      command: ["--tls=false"]     # Disable TLS; we connect over plain TCP
   variables:
-    DOCKER_HOST: tcp://docker:2375
-    DOCKER_TLS_CERTDIR: ""
+    DOCKER_HOST: tcp://docker:2375 # Point docker CLI to the DinD daemon
+    DOCKER_TLS_CERTDIR: ""         # Required to run DinD without TLS
   before_script:
+    # Decode the base64-encoded service account key to a file
     - echo "$GCP_SA_KEY" | base64 -d > key.json
-    - gcloud auth activate-service-account --key-file=key.json
-    - gcloud auth configure-docker $REGISTRY
-  script:
-    - docker build -t $REGISTRY/$PROJECT_ID/$REPO/mlops-iris-ii:latest .
-    - docker push $REGISTRY/$PROJECT_ID/$REPO/mlops-iris-ii:latest
 
+    # Authenticate Docker to Artifact Registry with the JSON key
+    - cat key.json | docker login -u _json_key --password-stdin https://$REGISTRY
+
+    # Prepare immutable and "latest" tags for this commit
+    - export IMAGE_SHA_TAG=$REGISTRY/$PROJECT_ID/$REPO/mlops-iris-ii:$CI_COMMIT_SHORT_SHA
+    - export IMAGE_LATEST_TAG=$REGISTRY/$PROJECT_ID/$REPO/mlops-iris-ii:latest
+  script:
+    # Build once, tag twice (immutable SHA tag + rolling latest)
+    - docker build -t "$IMAGE_SHA_TAG" -t "$IMAGE_LATEST_TAG" .
+    - docker push "$IMAGE_SHA_TAG"
+    - docker push "$IMAGE_LATEST_TAG"
+  after_script:
+    - rm -f key.json
+
+# -------------------------------------------------------------------
+# Stage: deploy — Authenticate to GCP, get cluster creds, deploy to GKE
+# -------------------------------------------------------------------
+# Applies the Kubernetes manifest and pins the image to the commit SHA
+# for deterministic rollouts. Waits for rollout to complete.
 deploy_to_gke:
+  image: google/cloud-sdk:485.0.0
   stage: deploy
+  variables:
+    NAMESPACE: "default"
   before_script:
+    # Activate service account and set project/cluster context
     - echo "$GCP_SA_KEY" | base64 -d > key.json
     - gcloud auth activate-service-account --key-file=key.json
-    - gcloud auth configure-docker $REGISTRY
-  script:
+    - gcloud config set project $PROJECT_ID
     - gcloud container clusters get-credentials $CLUSTER --region $REGION --project $PROJECT_ID
-    - kubectl apply -f kubernetes-deployment.yaml
+
+    # Use the immutable image tag for this commit
+    - export IMAGE_SHA_TAG="$REGISTRY/$PROJECT_ID/$REPO/mlops-iris-ii:$CI_COMMIT_SHORT_SHA"
+  script:
+    # Create/refresh Deployment and Service from the manifest
+    - kubectl apply -f kubernetes-deployment.yaml -n "$NAMESPACE"
+
+    # Force the Deployment to use the commit-specific image tag
+    - kubectl set image -n "$NAMESPACE" deployment/mlops-iris-ii mlops-iris-ii="$IMAGE_SHA_TAG" --record=true
+
+    # Quick checks and rollout confirmation
+    - kubectl get deploy,svc -n "$NAMESPACE"
+    - kubectl rollout status deployment/mlops-iris-ii -n "$NAMESPACE" --timeout=180s
+  after_script:
+    - rm -f key.json

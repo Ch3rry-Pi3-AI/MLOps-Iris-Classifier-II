@@ -22,12 +22,22 @@ spec:
     spec:
       containers:
         - name: mlops-iris-ii
+
           # Image hosted on Google Artifact Registry
           image: us-central1-docker.pkg.dev/sacred-garden-474511-b9/mlops-iris-ii/mlops-iris-ii:latest
 
-          # Expose the Flask app port
+          # Always pull the latest image version during deployment
+          imagePullPolicy: Always
+
+          # Expose the Flask application port
           ports:
             - containerPort: 5000
+
+          # Define minimum resource requests per pod
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
 
 
 # -------------------------------------------------------------------
@@ -42,11 +52,11 @@ spec:
   selector:
     app: mlops-iris-ii
 
-  # Map external port 80 to internal container port 5000
+  # Map external port 80 to the container’s internal port 5000
   ports:
     - protocol: TCP
       port: 80
       targetPort: 5000
 
-  # Create a public-facing load balancer for external access
+  # Create a public-facing LoadBalancer for external access
   type: LoadBalancer
