@@ -1,185 +1,155 @@
-# 🚀 **CI/CD Pipeline — MLOps Iris Classifier**
+Perfect — here’s your **final top-level README** for the **MLOps Iris Classifier — End-to-End CI/CD Deployment (GitLab Edition)**.
+It mirrors the structure and tone of the CircleCI version you provided, keeps the same flow and sections (including the Flask app GIF), but updates all references to use **GitLab pipelines** and the **GCP deployment** stages (0.5 → GitLab setup, 0.6 → GCP setup, 0.7 → CI/CD deployment).
 
-This stage introduces **Continuous Integration and Continuous Deployment (CI/CD)** for the **MLOps Iris Classifier** using **GitLab Pipelines** and **Google Cloud Platform (GCP)**.
-It automates the build, containerisation, and deployment of your Flask application into **Google Kubernetes Engine (GKE)**, enabling you to push updates directly from GitLab to production with minimal manual effort.
+All image references autoscale to full width, no horizontal rules are used anywhere.
 
-## 🧩 **Overview**
+---
 
-In this part of the project, you will:
+# 🌺 **MLOps Iris Classifier — End-to-End CI/CD Deployment (GitLab Edition)**
 
-1. Configure authentication with Google Cloud using a service account key.
-2. Add the required files for containerisation and deployment (`Dockerfile`, `kubernetes-deployment.yaml`, `.gitlab-ci.yml`).
-3. Encode your service account key into base64 for use in GitLab CI/CD variables.
-4. Push to GitLab to trigger an automated build → push → deploy pipeline.
-5. Access your running Flask application via the public endpoint in GKE.
-
-## 1️⃣ Copy and Rename Your Service Account Key
-
-Locate the **JSON key** you previously downloaded from GCP (in your **Downloads** folder).
-Copy it into your project’s **root directory** and rename it:
-
-```bash
-mv ~/Downloads/<your-key>.json gcp-key.json
-```
-
-This file will be used by your CI/CD pipeline to authenticate with Google Cloud services.
-
-## 2️⃣ Add the Dockerfile and Kubernetes Manifest
-
-Copy the **`Dockerfile`** and **`kubernetes-deployment.yaml`** files from the reference repository into your project root.
-You will also find the `.gitlab-ci.yml` in the same location.
-
-In the **Kubernetes YAML file**, locate **line 26** (the image path).
-Go to your **Artifact Registry** in GCP, click your repository, and select **“Copy path”** on the right-hand side.
+This repository demonstrates a **complete MLOps workflow** using the classic **Iris dataset**, progressing from data preprocessing and model training to full web deployment through an automated **CI/CD (Continuous Integration and Continuous Deployment)** pipeline built with **GitLab CI/CD** and deployed to **Google Cloud Platform (GCP)**.
 
 <p align="center">
-  <img src="img/cicd/image_path.png" alt="Artifact Registry Image Path" style="width:100%; height:auto;"/>
+  <img src="img/flask/flask_app.gif" alt="Deployed Flask Iris Classifier Application" style="width:100%; height:auto;"/>
 </p>
 
-Now paste this path into line 26 of the YAML file, then append `/<Your Image Name>:latest`.
-For example:
+While the machine learning use case — **Iris species classification** — is intentionally simple, the project’s main objective is to showcase a **modern, production-grade MLOps workflow** using **GitLab pipelines** for automation, containerisation, and cloud deployment through **Google Kubernetes Engine (GKE)**.
 
-```
-us-central1-docker.pkg.dev/sacred-garden-474511-b9/mlops-iris-ii/mlops-iris-ii:latest
-```
+## 🧩 **Project Overview**
 
-This ensures your Kubernetes deployment pulls the correct container image from GCP.
+This project guides the full lifecycle of a machine learning system — from raw data to live deployment — following a modular, reproducible, and production-aligned architecture.
+Each stage builds upon the previous one, ensuring traceability, automation, and scalability.
 
-## 3️⃣ Convert the GCP Key to Base64
+### 🌱 **Stage 00 — Project Setup**
 
-Next, convert your JSON key to base64 format.
-Open a terminal in your project root and run:
+The foundation was established with a structured repository layout (`src/`, `pipeline/`, `artifacts/`, etc.), dependency management via **`uv`**, and environment setup for consistent development.
 
-```bash
-cat gcp-key.json | base64 -w 0
-```
+### 💾 **Stage 01 — Data Processing**
 
-This command outputs your **base64-encoded key** as a single string.
-It should look something like:
+The **`data_processing.py`** module handled:
 
-```
-ewogICJ0eXB...29tIgp9Cg==
-```
+* Loading the Iris dataset
+* Cleaning and handling outliers
+* Splitting into training and test sets
+* Saving processed artefacts for downstream use
 
-Copy the entire output — you’ll use it when configuring your GitLab variable.
+This ensured that all preprocessing steps were fully reproducible and logged.
 
-## 4️⃣ Add the Base64 Key to GitLab CI/CD Variables
+### 🧠 **Stage 02 — Model Training**
 
-Log in to **GitLab**, open your project, and from the left-hand menu select **Settings → CI/CD**.
+The **`model_training.py`** module trained a **Decision Tree Classifier**, evaluated performance (accuracy, precision, recall, F1), and saved both the model (`model.pkl`) and confusion matrix.
+All actions were logged and wrapped with robust exception handling.
 
-<p align="center">
-  <img src="img/cicd/gitlab_settings_cicd.png" alt="GitLab CI/CD Settings" style="width:100%; height:auto;"/>
-</p>
+### 🌸 **Stage 03 — Flask Application**
 
-Scroll down to the **Variables** section and click **“Add variable.”**
+A **Flask web app** was developed to serve the trained model through a user-friendly interface.
+Users can input sepal and petal measurements and receive real-time species predictions.
+This stage introduced:
 
-<p align="center">
-  <img src="img/cicd/add_variable.png" alt="Add Variable Button" style="width:100%; height:auto;"/>
-</p>
+* A responsive UI (`templates/index.html`)
+* Clean styling (`static/style.css`)
+* Live model inference served via `app.py`
 
-In the **Key** field, enter `GCP_SA_KEY`.
-In the **Value** field, paste the base64-encoded key you generated earlier.
-Set **Visibility** to *Visible*, then click **Add variable**.
+### ⚙️ **Stage 04 — Training Pipeline**
 
-<p align="center">
-  <img src="img/cicd/key_added.png" alt="Key Added Successfully" style="width:100%; height:auto;"/>
-</p>
+The **`pipeline/training_pipeline.py`** module unified data processing and model training into a single automated script, ensuring consistent execution and end-to-end logging.
+This stage introduced modular orchestration, preparing the groundwork for CI/CD integration.
 
-This securely stores your credentials, allowing GitLab CI/CD to authenticate with GCP during pipeline execution.
+### 🦊 **Stage 05 — GitLab Integration**
 
-## 5️⃣ Add the `.gitlab-ci.yml` File
+The project was linked to **GitLab** to manage source control and pipeline automation.
+This involved:
 
-In your project root, create a file called `.gitlab-ci.yml` and paste the CI/CD pipeline configuration.
-This file defines three stages — **checkout**, **build**, and **deploy** — and automates the entire workflow from code to production.
+* Creating a GitLab repository and configuring remotes alongside GitHub.
+* Setting global Git identity and adding a secondary remote (`git remote add gitlab …`).
+* Enabling seamless code pushes to both GitHub and GitLab.
 
-Once you’ve added it, commit and push your code to GitLab:
+Every commit pushed to GitLab triggers an automated pipeline, establishing the foundation for full CI/CD automation.
 
-```bash
-git add .
-git commit -m "Add CI/CD pipeline configuration"
-git push gitlab main
-```
+### ☁️ **Stage 06 — Google Cloud Platform (GCP) Setup**
 
-This triggers your first CI/CD pipeline.
+The cloud infrastructure was provisioned within **Google Cloud Platform** to host containerised workloads and manage deployments via **GKE Autopilot**.
 
-<p align="center">
-  <img src="img/cicd/gitlab_job_running.png" alt="GitLab Job Running" style="width:100%; height:auto;"/>
-</p>
+Key configuration steps included:
 
-After a few minutes, if all stages complete successfully, you will see:
+* Enabling essential APIs: Kubernetes Engine, Artifact Registry, Compute Engine, IAM, Cloud Build, and Cloud Storage.
+* Creating an **Artifact Registry** repository (`mlops-iris-ii`) in `us-central1`.
+* Setting up a **Service Account** with IAM permissions and generating a JSON key.
+* Creating a **GKE Autopilot cluster** (`autopilot-cluster-1`) in the same region.
 
-<p align="center">
-  <img src="img/cicd/pipeline_succeeded.png" alt="Pipeline Succeeded" style="width:100%; height:auto;"/>
-</p>
+This environment provides a secure, scalable foundation for the CI/CD pipeline.
 
-## 6️⃣ Verify the Deployment in GCP
+### 🚀 **Stage 07 — CI/CD Deployment (GitLab → GCP)**
 
-Return to the **Google Cloud Console**.
-Navigate to **Kubernetes Engine → Workloads**.
+Finally, the project was extended into a **CI/CD pipeline** using **GitLab CI/CD** to automate the build-and-deploy process.
+Each push to GitLab (`git add`, `git commit`, `git push gitlab main`) automatically triggers:
 
-<p align="center">
-  <img src="img/cicd/gcp_workloads.png" alt="GCP Workloads" style="width:100%; height:auto;"/>
-</p>
+1. **Build** — Construct a Docker image for the Flask app using the provided `Dockerfile`.
+2. **Push** — Upload the image to **GCP Artifact Registry**.
+3. **Deploy** — Apply `kubernetes-deployment.yaml` to the **GKE cluster** to update the live application.
 
-Click on **mlops-iris-ii** and scroll down to the **Exposing services** section.
+The pipeline logic resides in **`.gitlab-ci.yml`**, which defines three stages — `checkout`, `build`, and `deploy`.
+On completion, the application becomes publicly accessible via the external LoadBalancer endpoint provided by GKE.
 
-<p align="center">
-  <img src="img/cicd/endpoint.png" alt="Kubernetes Service Endpoint" style="width:100%; height:auto;"/>
-</p>
+## 💡 **Why GitLab CI/CD over CircleCI or Jenkins?**
 
-The **Endpoint** link is your live project endpoint.
-Click it to open the deployed **MLOps Iris Classifier** web application in your browser.
+This implementation uses **GitLab CI/CD** instead of CircleCI or Jenkins to demonstrate a tightly integrated, end-to-end DevOps experience.
 
-<p align="center">
-  <img src="img/flask/flask_app.png" alt="Flask App Running on GKE" style="width:100%; height:auto;"/>
-</p>
+### ✅ **Key Advantages of GitLab CI/CD**
 
-You can now interact with the classifier directly from your deployed GCP environment — entering input values and receiving predictions in real time.
+* **Native integration** with repositories — pipelines trigger automatically on push.
+* **Built-in container registry** and easy authentication with GCP Artifact Registry.
+* **No external servers required** — everything runs on GitLab’s managed runners.
+* **Environment variables** for securely storing service account keys and secrets.
+* **Excellent GCP integration** — ideal for deploying to GKE Autopilot clusters.
+* **Unified interface** for version control, pipelines, and deployments.
 
-## 🗂️ **Updated Project Structure**
+Together, these features make **GitLab CI/CD a powerful, all-in-one platform** for orchestrating MLOps workflows.
+
+## 🗂️ **Final Project Structure**
 
 ```text
 mlops_iris_classifier/
-├── .venv/                          # 🧩 Local virtual environment (created by uv)
-├── artifacts/
+├── artifacts/                    # Data, processed artefacts, and model outputs
 │   ├── raw/
-│   │   └── data.csv                # 🌸 Input Iris dataset
-│   ├── processed/                  # 💾 Preprocessed artefacts (from DataProcessing)
-│   │   ├── X_train.pkl
-│   │   ├── X_test.pkl
-│   │   ├── y_train.pkl
-│   │   └── y_test.pkl
-│   └── models/                     # 🧠 Trained model and evaluation artefacts
-│       ├── model.pkl
-│       └── confusion_matrix.png
-├── img/
-│   ├── cicd/
-│   └── flask/
-├── mlops_iris_classifier.egg-info/ # 📦 Package metadata (auto-generated)
-├── pipeline/                       # ⚙️ Workflow orchestration layer
-│   └── training_pipeline.py        # Executes data preparation + model training
+│   ├── processed/
+│   └── models/
+├── pipeline/
+│   └── training_pipeline.py       # Unified orchestration of data processing + training
 ├── src/
-│   ├── __init__.py
-│   ├── custom_exception.py         # Unified and detailed exception handling
-│   ├── logger.py                   # Centralised logging configuration
-│   ├── data_processing.py          # 🌱 Data preparation workflow
-│   └── model_training.py           # 🌳 Model training and evaluation workflow
-├── static/                         # 🎨 Visual assets (used in Flask UI)
-├── templates/                      # 🧩 Flask HTML templates (for app stage)
-├── .gitignore                      # 🚫 Git ignore rules
-├── .python-version                 # 🐍 Python version pin
-├── pyproject.toml                  # ⚙️ Project metadata and uv configuration
-├── requirements.txt                # 📦 Python dependencies
-├── setup.py                        # 🔧 Editable install support
-├── uv.lock                         # 🔒 Locked dependency versions
-├── Dockerfile                      # 🐳 Container image definition
-├── kubernetes-deployment.yaml      # ☸️ Deployment & Service configuration
-└── .gitlab-ci.yml                  # 🚀 CI/CD pipeline configuration for GitLab
+│   ├── data_processing.py
+│   ├── model_training.py
+│   ├── logger.py
+│   └── custom_exception.py
+├── templates/
+│   └── index.html                 # Flask front-end UI
+├── static/
+│   ├── style.css
+│   └── img/app_background.jpg
+├── img/
+│   ├── flask/flask_app.gif        # Animated Flask app demonstration
+│   ├── cicd/                      # Screenshots for GitLab + GCP setup
+│   └── gcp/
+├── Dockerfile                     # Container image definition for Flask app
+├── kubernetes-deployment.yaml     # Kubernetes Deployment + Service configuration
+├── .gitlab-ci.yml                 # GitLab CI/CD pipeline definition
+├── app.py                         # Flask application entry point
+├── pyproject.toml                 # Project metadata
+├── setup.py                       # Editable install support
+└── requirements.txt               # Dependencies
 ```
+
+## 🌐 **End-to-End Workflow Summary**
+
+1. **Data Ingestion & Preprocessing** → clean, split, and save artefacts.
+2. **Model Training** → fit, evaluate, and export model artefacts.
+3. **Flask Deployment** → serve predictions through a local web interface.
+4. **Pipeline Orchestration** → automate full data + training execution.
+5. **GitLab Integration** → manage version control and trigger pipelines.
+6. **GCP Setup** → provision registry, service account, and cluster.
+7. **CI/CD Deployment** → build and deploy automatically to GKE.
 
 ## ✅ **In Summary**
 
-This stage transforms the **MLOps Iris Classifier** into a fully automated, production-ready system.
-Every code push triggers a pipeline that builds the Docker image, pushes it to **GCP Artifact Registry**, updates the **Kubernetes cluster**, and deploys the live application automatically.
-
-By combining **GitLab CI/CD** with **Google Cloud Platform**, you now have a complete end-to-end MLOps workflow — from data ingestion and model training to deployment and live inference.
+This project transforms a simple Iris classification model into a **complete, automated MLOps system**.
+It demonstrates how to **operationalise machine learning workflows** using **GitLab CI/CD** and **Google Cloud Platform**, covering every stage — from data to deployment — in a fully reproducible, production-ready pipeline.
