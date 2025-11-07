@@ -1,124 +1,185 @@
-# ☁️ **Google Cloud Platform (GCP) Setup — MLOps Iris Classifier**
+# 🚀 **CI/CD Pipeline — MLOps Iris Classifier**
 
-This stage introduces **Google Cloud Platform (GCP)** configuration for the **MLOps Iris Classifier** project.
-The setup prepares the cloud infrastructure necessary for deploying containerised applications and machine learning workflows using **Kubernetes (GKE)**, **Artifact Registry**, and **Service Accounts** with secure IAM permissions.
+This stage introduces **Continuous Integration and Continuous Deployment (CI/CD)** for the **MLOps Iris Classifier** using **GitLab Pipelines** and **Google Cloud Platform (GCP)**.
+It automates the build, containerisation, and deployment of your Flask application into **Google Kubernetes Engine (GKE)**, enabling you to push updates directly from GitLab to production with minimal manual effort.
 
-By completing this setup, your environment will be ready to build, store, and deploy Docker containers directly from your CI/CD pipelines (such as CircleCI or GitLab CI) into **GKE Autopilot** within the **us-central1 (Iowa)** region.
+## 🧩 **Overview**
 
-## 🌐 **Overview**
+In this part of the project, you will:
 
-This GCP configuration involves five key steps:
+1. Configure authentication with Google Cloud using a service account key.
+2. Add the required files for containerisation and deployment (`Dockerfile`, `kubernetes-deployment.yaml`, `.gitlab-ci.yml`).
+3. Encode your service account key into base64 for use in GitLab CI/CD variables.
+4. Push to GitLab to trigger an automated build → push → deploy pipeline.
+5. Access your running Flask application via the public endpoint in GKE.
 
-1. Enabling the required APIs
-2. Creating an Artifact Registry repository
-3. Setting up a Service Account and JSON key
-4. Creating a Kubernetes Autopilot cluster
-5. Ensuring consistent region and network configuration
+## 1️⃣ Copy and Rename Your Service Account Key
 
-Each step ensures the environment is secure, aligned, and ready for MLOps deployment.
+Locate the **JSON key** you previously downloaded from GCP (in your **Downloads** folder).
+Copy it into your project’s **root directory** and rename it:
 
-## 1️⃣ Enable Required APIs
+```bash
+mv ~/Downloads/<your-key>.json gcp-key.json
+```
 
-Go to your [Google Cloud Console](https://console.cloud.google.com) and open the **Navigation Menu → APIs & Services → Library**.
+This file will be used by your CI/CD pipeline to authenticate with Google Cloud services.
 
-Use the search bar to confirm that the following APIs are **enabled**:
+## 2️⃣ Add the Dockerfile and Kubernetes Manifest
 
-* Kubernetes Engine API
-* Google Container Registry API
-* Compute Engine API
-* Identity and Access Management (IAM) API
-* Cloud Build API
-* Cloud Storage API
+Copy the **`Dockerfile`** and **`kubernetes-deployment.yaml`** files from the reference repository into your project root.
+You will also find the `.gitlab-ci.yml` in the same location.
 
-When an API is correctly enabled (for example, *Kubernetes Engine API*), you should see a confirmation like this:
-
-<p align="center">
-  <img src="img/gcp/api_enabled.png" alt="GCP API Enabled Example" style="width:100%; max-width:720px; height:auto;"/>
-</p>
-
-## 2️⃣ Create an Artifact Registry Repository
-
-Return to the GCP landing page and **search for “Artifact Registry”**.
-Click **+ Create Repository** and complete the following fields:
-
-* **Repository name:** `mlops-iris-ii`
-* **Region:** `us-central1 (Iowa)`
-* Keep all other settings as default.
-* Scroll to the bottom and click **Create**.
+In the **Kubernetes YAML file**, locate **line 26** (the image path).
+Go to your **Artifact Registry** in GCP, click your repository, and select **“Copy path”** on the right-hand side.
 
 <p align="center">
-  <img src="img/gcp/create_repo.png" alt="Create GCP Artifact Registry Repository" style="width:100%; max-width:720px; height:auto;"/>
+  <img src="img/cicd/image_path.png" alt="Artifact Registry Image Path" style="width:100%; height:auto;"/>
 </p>
 
-This repository will store Docker images and related artefacts used in deployment.
+Now paste this path into line 26 of the YAML file, then append `/<Your Image Name>:latest`.
+For example:
 
-## 3️⃣ Create a Service Account
+```
+us-central1-docker.pkg.dev/sacred-garden-474511-b9/mlops-iris-ii/mlops-iris-ii:latest
+```
 
-Return to the **Navigation Menu → IAM & Admin → Service Accounts**.
-Click **+ Create Service Account** and name it `mlops-iris-ii`.
+This ensures your Kubernetes deployment pulls the correct container image from GCP.
 
-Under **Permissions (optional)**, assign the following permissions:
+## 3️⃣ Convert the GCP Key to Base64
+
+Next, convert your JSON key to base64 format.
+Open a terminal in your project root and run:
+
+```bash
+cat gcp-key.json | base64 -w 0
+```
+
+This command outputs your **base64-encoded key** as a single string.
+It should look something like:
+
+```
+ewogICJ0eXB...29tIgp9Cg==
+```
+
+Copy the entire output — you’ll use it when configuring your GitLab variable.
+
+## 4️⃣ Add the Base64 Key to GitLab CI/CD Variables
+
+Log in to **GitLab**, open your project, and from the left-hand menu select **Settings → CI/CD**.
 
 <p align="center">
-  <img src="img/gcp/permissions.png" alt="Assign IAM Permissions" style="width:100%; max-width:720px; height:auto;"/>
+  <img src="img/cicd/gitlab_settings_cicd.png" alt="GitLab CI/CD Settings" style="width:100%; height:auto;"/>
 </p>
 
-Click **Create**. Once complete, you will see your new service account listed.
-
-Next, click the **Actions** button (on the far right of the row) and choose **Manage Keys**.
-Select **Add Key → Create new key**, then choose **JSON** as the key type.
+Scroll down to the **Variables** section and click **“Add variable.”**
 
 <p align="center">
-  <img src="img/gcp/create_key.png" alt="Create Service Account Key" style="width:100%; max-width:720px; height:auto;"/>
+  <img src="img/cicd/add_variable.png" alt="Add Variable Button" style="width:100%; height:auto;"/>
 </p>
 
-Click **Create** to download your JSON key file.
-This file will be used later to authenticate your cloud resources and pipelines.
-
-## 4️⃣ Create a Kubernetes Autopilot Cluster
-
-Return to the GCP landing page and search for **Kubernetes Engine**.
-From the left-hand pane, select **Clusters**.
+In the **Key** field, enter `GCP_SA_KEY`.
+In the **Value** field, paste the base64-encoded key you generated earlier.
+Set **Visibility** to *Visible*, then click **Add variable**.
 
 <p align="center">
-  <img src="img/gcp/cluster.png" alt="Kubernetes Engine Clusters" style="width:100%; max-width:720px; height:auto;"/>
+  <img src="img/cicd/key_added.png" alt="Key Added Successfully" style="width:100%; height:auto;"/>
 </p>
 
-Click **Create Cluster**.
-When prompted, select the **Autopilot** mode (the default option):
+This securely stores your credentials, allowing GitLab CI/CD to authenticate with GCP during pipeline execution.
+
+## 5️⃣ Add the `.gitlab-ci.yml` File
+
+In your project root, create a file called `.gitlab-ci.yml` and paste the CI/CD pipeline configuration.
+This file defines three stages — **checkout**, **build**, and **deploy** — and automates the entire workflow from code to production.
+
+Once you’ve added it, commit and push your code to GitLab:
+
+```bash
+git add .
+git commit -m "Add CI/CD pipeline configuration"
+git push gitlab main
+```
+
+This triggers your first CI/CD pipeline.
 
 <p align="center">
-  <img src="img/gcp/autopilot_cluster.png" alt="Autopilot Cluster Option" style="width:100%; max-width:720px; height:auto;"/>
+  <img src="img/cicd/gitlab_job_running.png" alt="GitLab Job Running" style="width:100%; height:auto;"/>
 </p>
 
-In the **Cluster basics** section, keep the defaults:
-
-* **Cluster name:** `autopilot-cluster-1`
-* **Region:** `us-central1` (must match your Artifact Registry region)
-
-Leave **Fleet Registration** settings unchanged.
-
-In the **Networking** section, ensure both of the following are selected:
-
-* **Access using DNS**
-* **Access using IPv4 addresses**
+After a few minutes, if all stages complete successfully, you will see:
 
 <p align="center">
-  <img src="img/gcp/networking.png" alt="Kubernetes Networking Configuration" style="width:100%; max-width:720px; height:auto;"/>
+  <img src="img/cicd/pipeline_succeeded.png" alt="Pipeline Succeeded" style="width:100%; height:auto;"/>
 </p>
 
-Keep the **Advanced settings** as default and click **Create**.
+## 6️⃣ Verify the Deployment in GCP
 
-The cluster creation process will take several minutes.
-Wait until it is fully provisioned before proceeding to any deployment or pipeline integration.
+Return to the **Google Cloud Console**.
+Navigate to **Kubernetes Engine → Workloads**.
+
+<p align="center">
+  <img src="img/cicd/gcp_workloads.png" alt="GCP Workloads" style="width:100%; height:auto;"/>
+</p>
+
+Click on **mlops-iris-ii** and scroll down to the **Exposing services** section.
+
+<p align="center">
+  <img src="img/cicd/endpoint.png" alt="Kubernetes Service Endpoint" style="width:100%; height:auto;"/>
+</p>
+
+The **Endpoint** link is your live project endpoint.
+Click it to open the deployed **MLOps Iris Classifier** web application in your browser.
+
+<p align="center">
+  <img src="img/flask/flask_app.png" alt="Flask App Running on GKE" style="width:100%; height:auto;"/>
+</p>
+
+You can now interact with the classifier directly from your deployed GCP environment — entering input values and receiving predictions in real time.
+
+## 🗂️ **Updated Project Structure**
+
+```text
+mlops_iris_classifier/
+├── .venv/                          # 🧩 Local virtual environment (created by uv)
+├── artifacts/
+│   ├── raw/
+│   │   └── data.csv                # 🌸 Input Iris dataset
+│   ├── processed/                  # 💾 Preprocessed artefacts (from DataProcessing)
+│   │   ├── X_train.pkl
+│   │   ├── X_test.pkl
+│   │   ├── y_train.pkl
+│   │   └── y_test.pkl
+│   └── models/                     # 🧠 Trained model and evaluation artefacts
+│       ├── model.pkl
+│       └── confusion_matrix.png
+├── img/
+│   ├── cicd/
+│   └── flask/
+├── mlops_iris_classifier.egg-info/ # 📦 Package metadata (auto-generated)
+├── pipeline/                       # ⚙️ Workflow orchestration layer
+│   └── training_pipeline.py        # Executes data preparation + model training
+├── src/
+│   ├── __init__.py
+│   ├── custom_exception.py         # Unified and detailed exception handling
+│   ├── logger.py                   # Centralised logging configuration
+│   ├── data_processing.py          # 🌱 Data preparation workflow
+│   └── model_training.py           # 🌳 Model training and evaluation workflow
+├── static/                         # 🎨 Visual assets (used in Flask UI)
+├── templates/                      # 🧩 Flask HTML templates (for app stage)
+├── .gitignore                      # 🚫 Git ignore rules
+├── .python-version                 # 🐍 Python version pin
+├── pyproject.toml                  # ⚙️ Project metadata and uv configuration
+├── requirements.txt                # 📦 Python dependencies
+├── setup.py                        # 🔧 Editable install support
+├── uv.lock                         # 🔒 Locked dependency versions
+├── Dockerfile                      # 🐳 Container image definition
+├── kubernetes-deployment.yaml      # ☸️ Deployment & Service configuration
+└── .gitlab-ci.yml                  # 🚀 CI/CD pipeline configuration for GitLab
+```
 
 ## ✅ **In Summary**
 
-At the end of this stage:
+This stage transforms the **MLOps Iris Classifier** into a fully automated, production-ready system.
+Every code push triggers a pipeline that builds the Docker image, pushes it to **GCP Artifact Registry**, updates the **Kubernetes cluster**, and deploys the live application automatically.
 
-* All essential GCP APIs are active.
-* A secure **Artifact Registry** repository (`mlops-iris-ii`) has been created.
-* A **Service Account** with JSON credentials is available for authentication.
-* A fully managed **Autopilot Kubernetes cluster** (`autopilot-cluster-1`) has been provisioned in `us-central1`.
-
-This setup completes the cloud infrastructure foundation for the **MLOps Iris Classifier** project and prepares it for container deployment, CI/CD integration, and future scalability across GCP services.
+By combining **GitLab CI/CD** with **Google Cloud Platform**, you now have a complete end-to-end MLOps workflow — from data ingestion and model training to deployment and live inference.
