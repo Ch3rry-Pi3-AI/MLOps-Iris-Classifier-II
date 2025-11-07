@@ -3,6 +3,9 @@ stages:
   - build
   - deploy
 
+# -------------------------------------------------------------------
+# Global variables (project, region, registry, cluster)
+# -------------------------------------------------------------------
 variables:
   PROJECT_ID: "sacred-garden-474511-b9"
   REGION: "us-central1"
@@ -10,6 +13,9 @@ variables:
   REGISTRY: "us-central1-docker.pkg.dev"
   CLUSTER: "autopilot-cluster-1"
 
+# -------------------------------------------------------------------
+# Stage: checkout — placeholder to mirror typical pipelines
+# -------------------------------------------------------------------
 checkout_code:
   image: alpine:3.20
   stage: checkout
@@ -24,8 +30,8 @@ build_docker_image:
     - name: docker:24.0.9-dind
       command: ["--tls=false"]
   variables:
-    DOCKER_HOST: tcp://docker:2375
-    DOCKER_TLS_CERTDIR: ""
+    DOCKER_HOST: tcp://docker:2375 # Point docker CLI to the DinD daemon
+    DOCKER_TLS_CERTDIR: ""         # Required to run DinD without TLS
   before_script:
     # Decode the base64 service account key to a file
     - echo "$GCP_SA_KEY" | base64 -d > key.json
@@ -41,12 +47,18 @@ build_docker_image:
   after_script:
     - rm -f key.json
 
+# -------------------------------------------------------------------
+# Stage: deploy — Authenticate to GCP, get cluster creds, deploy to GKE
+# -------------------------------------------------------------------
+# Applies the Kubernetes manifest and pins the image to the commit SHA
+# for deterministic rollouts. Waits for rollout to complete.
 deploy_to_gke:
   image: google/cloud-sdk:485.0.0
   stage: deploy
   variables:
     NAMESPACE: "default"
   before_script:
+    # Activate service account and set project/cluster context
     - echo "$GCP_SA_KEY" | base64 -d > key.json
     - gcloud auth activate-service-account --key-file=key.json
     - gcloud config set project $PROJECT_ID
