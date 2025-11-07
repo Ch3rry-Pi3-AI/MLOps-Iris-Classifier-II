@@ -1,149 +1,88 @@
-# ⚙️ **Training Pipeline — MLOps Iris Classifier**
+# 🦊 **GitLab Integration — MLOps Iris Classifier**
 
-This branch builds upon the **model training stage** by introducing the **`training_pipeline.py`** module inside the `pipeline/` folder.
-It represents the **fourth executable workflow stage** of the **MLOps Iris Classifier** pipeline — combining all previous stages into a single, orchestrated execution flow for full automation and reproducibility.
+This stage introduces **GitLab integration** for the **MLOps Iris Classifier** project, allowing the repository to be mirrored and maintained across **both GitHub and GitLab**.
+While GitHub remains excellent for open collaboration and ecosystem integration, GitLab offers additional advantages for **CI/CD automation**, **repository management**, and **self-hosted DevOps flexibility**.
+
+Using both platforms in parallel provides redundancy and freedom — combining GitHub’s developer community with GitLab’s advanced pipeline control.
+
+## 💡 Why Use GitLab (in Addition to GitHub)
+
+| Feature                    | GitHub                                                        | GitLab                                                            |
+| :------------------------- | :------------------------------------------------------------ | :---------------------------------------------------------------- |
+| **CI/CD Integration**      | Requires external setup (e.g., GitHub Actions YAML workflows) | Built-in GitLab CI/CD with integrated runners                     |
+| **Repository Visibility**  | Excellent for public, open-source collaboration               | Great for private or enterprise projects                          |
+| **Permissions & Security** | Simple but limited for complex org setups                     | Fine-grained roles and access control                             |
+| **DevOps Scope**           | Primarily source control & Actions                            | Complete DevOps lifecycle (Plan → Code → Test → Deploy → Monitor) |
+| **Self-Hosting Option**    | Available only via GitHub Enterprise                          | Fully supported via GitLab Community/Enterprise editions          |
+
+By linking this project to GitLab as well, future branches can easily integrate **GitLab pipelines**, **container registry support**, and **deployment automation** alongside GitHub’s existing workflow.
+
+## 🧩 Step-by-Step GitLab Setup
+
+### 1️⃣ Create or Log In to GitLab
+
+Go to [https://gitlab.com](https://gitlab.com) and **sign up or log in**.
 
 <p align="center">
-  <img src="img/flask/flask_app.png" alt="MLOps Iris Pipeline Overview" width="720"/>
+  <img src="img/gitlab/create_project.png" alt="GitLab Create Project" style="width:90%; max-width:720px; height:auto;"/>
 </p>
 
-## 🧩 **Overview**
+### 2️⃣ Create a New Project
 
-The **`training_pipeline.py`** script acts as the **orchestration layer** for the MLOps workflow, executing both the **data preparation** and **model training** stages in one seamless run.
-It ensures a consistent, traceable process by leveraging the modular design of `src/data_processing.py` and `src/model_training.py`, with integrated logging and exception handling.
+On the dashboard, click **“New Project”** and choose **Global** setup rather than **Local**.
 
-### 🔍 Core Responsibilities
+<p align="center">
+  <img src="img/gitlab/global_setup.png" alt="Global vs Local Setup" style="width:90%; max-width:720px; height:auto;"/>
+</p>
 
-| Stage | Operation              | Description                                                                                                                                          |
-| ----: | ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-|   1️⃣ | **Data Processing**    | Invokes `DataProcessing` to load the raw dataset, handle outliers, split train/test sets, and save processed artefacts under `artifacts/processed/`. |
-|   2️⃣ | **Model Training**     | Calls `ModelTraining` to load processed data, train a Decision Tree model, evaluate performance, and save results under `artifacts/models/`.         |
-|   3️⃣ | **Logging**            | Records each step, from ingestion to evaluation, via `src/logger.py` for full traceability.                                                          |
-|   4️⃣ | **Exception Handling** | Standardises all errors through `src/custom_exception.py` for consistent debugging.                                                                  |
+### 3️⃣ Configure Global Git Identity
 
-## 🗂️ **Updated Project Structure**
-
-```text
-mlops_iris_classifier/
-├── .venv/                          # 🧩 Local virtual environment (created by uv)
-├── artifacts/
-│   ├── raw/
-│   │   └── data.csv                # 🌸 Input Iris dataset
-│   ├── processed/                  # 💾 Preprocessed artefacts (from DataProcessing)
-│   │   ├── X_train.pkl
-│   │   ├── X_test.pkl
-│   │   ├── y_train.pkl
-│   │   └── y_test.pkl
-│   └── models/                     # 🧠 Trained model and evaluation artefacts
-│       ├── model.pkl
-│       └── confusion_matrix.png
-├── img/
-│   └── flask/
-│       └── flask_app.png           # 🖼️ Pipeline overview or app preview
-├── mlops_iris_classifier.egg-info/ # 📦 Package metadata (auto-generated)
-├── pipeline/                       # ⚙️ Workflow orchestration layer
-│   └── training_pipeline.py        # Executes data preparation + model training
-├── src/
-│   ├── __init__.py
-│   ├── custom_exception.py         # Unified and detailed exception handling
-│   ├── logger.py                   # Centralised logging configuration
-│   ├── data_processing.py          # 🌱 Data preparation workflow
-│   └── model_training.py           # 🌳 Model training and evaluation workflow
-├── static/                         # 🎨 Visual assets (used in Flask UI)
-├── templates/                      # 🧩 Flask HTML templates (for app stage)
-├── .gitignore                      # 🚫 Git ignore rules
-├── .python-version                 # 🐍 Python version pin
-├── pyproject.toml                  # ⚙️ Project metadata and uv configuration
-├── requirements.txt                # 📦 Python dependencies
-├── setup.py                        # 🔧 Editable install support
-└── uv.lock                         # 🔒 Locked dependency versions
-```
-
-## ⚙️ **How to Run the Training Pipeline**
-
-After verifying your dataset exists under `artifacts/raw/data.csv`, execute the following command:
+In your project root terminal, configure your global Git identity (if not already done):
 
 ```bash
-python pipeline/training_pipeline.py
+git config --global user.name "Roger Campbell"
+git config --global user.email "the_rfc@hotmail.co.uk"
 ```
 
-### ✅ **Expected Successful Output**
+### 4️⃣ Copy the Git Remote Command
 
-```console
-2025-11-07 12:45:16,210 - INFO - Data read successfully. Shape: (150, 6)
-2025-11-07 12:45:16,300 - INFO - Outliers handled successfully for column: SepalWidthCm
-2025-11-07 12:45:16,404 - INFO - Data split successfully into train/test sets.
-2025-11-07 12:45:16,517 - INFO - Processed data saved successfully under artifacts/processed/
-2025-11-07 12:45:16,621 - INFO - ModelTraining initialised successfully.
-2025-11-07 12:45:16,704 - INFO - Processed data loaded successfully.
-2025-11-07 12:45:16,782 - INFO - Model trained and saved successfully.
-2025-11-07 12:45:16,897 - INFO - Accuracy Score  : 1.0000
-2025-11-07 12:45:16,898 - INFO - Precision Score : 1.0000
-2025-11-07 12:45:16,898 - INFO - Recall Score    : 1.0000
-2025-11-07 12:45:16,899 - INFO - F1 Score        : 1.0000
-2025-11-07 12:45:17,041 - INFO - Confusion matrix saved successfully.
+On the “Push an existing folder” screen, locate the section titled **Configure the Git repository**.
+Copy the `git remote add origin …` command provided there.
+
+<p align="center">
+  <img src="img/gitlab/add_remote.png" alt="Add GitLab Remote" style="width:90%; max-width:720px; height:auto;"/>
+</p>
+
+### 5️⃣ Add GitLab Remote (Alongside GitHub)
+
+If this project is already connected to GitHub, simply give the new remote a different name:
+
+```bash
+git remote add gitlab https://gitlab.com/Ch3rry-Pi3/mlops-iris-classifier-ii.git
 ```
 
-This confirms that:
+This means:
 
-* Both stages executed successfully in sequence.
-* Artefacts were saved in their respective directories.
-* All steps were logged consistently for reproducibility.
+* `origin` → GitHub
+* `gitlab` → GitLab
 
-## 🧱 **Code Overview**
+### 6️⃣ Pushing to GitLab
 
-```python
-from src.data_processing import DataProcessing
-from src.model_training import ModelTraining
+To push your latest branch (for example, `main` or `05_cicd`) to GitLab:
 
-if __name__ == "__main__":
-    # Step 1: Data Processing
-    data_processor = DataProcessing("artifacts/raw/data.csv")
-    data_processor.run()
-
-    # Step 2: Model Training
-    trainer = ModelTraining()
-    trainer.run()
+```bash
+git push gitlab main
 ```
 
-This design ensures that each workflow stage is **self-contained**, yet fully interoperable when executed sequentially.
+All regular commands like `git add .` and `git commit -m "message"` will work as usual — you only specify the target remote when pushing.
 
-## 🧩 **Integration Summary**
+## ✅ In Summary
 
-| File                            | Purpose                                                      |
-| ------------------------------- | ------------------------------------------------------------ |
-| `pipeline/training_pipeline.py` | Coordinates the end-to-end pipeline execution.               |
-| `src/data_processing.py`        | Handles data loading, cleaning, and splitting.               |
-| `src/model_training.py`         | Trains and evaluates the Decision Tree model.                |
-| `src/logger.py`                 | Provides structured, timestamped logging.                    |
-| `src/custom_exception.py`       | Ensures clear, contextual error handling.                    |
-| `artifacts/`                    | Stores all datasets, trained models, and evaluation outputs. |
+By integrating GitLab:
 
-## 💡 **Example Workflow**
+* You maintain a **redundant repository** for added resilience.
+* You gain access to **built-in CI/CD pipelines** and **registry management**.
+* You retain the **GitHub link** for open collaboration and visibility.
+* The project remains **fully synchronised** across both platforms with minimal extra effort.
 
-1. Prepare and clean your data:
-
-   ```bash
-   python src/data_processing.py
-   ```
-
-2. Train and evaluate the model:
-
-   ```bash
-   python src/model_training.py
-   ```
-
-3. Or run the entire workflow automatically:
-
-   ```bash
-   python pipeline/training_pipeline.py
-   ```
-
-4. Review the generated artefacts under `artifacts/processed/` and `artifacts/models/`.
-
-## ✅ **In Summary**
-
-This branch elevates the **MLOps Iris Classifier** into a **fully orchestrated machine learning pipeline**, linking all stages — from raw data to trained model — in a single reproducible process.
-The `training_pipeline.py` module ensures that data processing and model training execute reliably, with full logging, error handling, and artefact management.
-
-It establishes the foundation for **future automation**, including CI/CD integration, **MLflow experiment tracking**, or **Kubeflow pipeline deployment**.
+This dual-remote setup establishes a robust foundation for future **GitLab CI/CD automation**, complementing the existing **CircleCI integration** and extending the project’s overall DevOps capability.
