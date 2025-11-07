@@ -1,5 +1,3 @@
-image: google/cloud-sdk:latest
-
 stages:
   - checkout
   - build
@@ -13,32 +11,51 @@ variables:
   CLUSTER: "autopilot-cluster-1"
 
 checkout_code:
+  image: alpine:3.20
   stage: checkout
   script:
-    - echo "Code Checked out.."
+    - echo "Code checked out."
 
+# Build & push with Docker-in-Docker: job image has docker CLI, service runs the daemon
 build_docker_image:
+  image: docker:24.0.9
   stage: build
   services:
-    - name: docker:dind
+    - name: docker:24.0.9-dind
       command: ["--tls=false"]
   variables:
     DOCKER_HOST: tcp://docker:2375
     DOCKER_TLS_CERTDIR: ""
   before_script:
+    # Decode the base64 service account key to a file
     - echo "$GCP_SA_KEY" | base64 -d > key.json
-    - gcloud auth activate-service-account --key-file=key.json
-    - gcloud auth configure-docker $REGISTRY
+    # Authenticate Docker to Artifact Registry using the JSON key (no gcloud needed here)
+    - cat key.json | docker login -u _json_key --password-stdin https://$REGISTRY
+    # Use a unique, immutable tag (recommended) and also tag :latest if you want
+    - export IMAGE_SHA_TAG=$REGISTRY/$PROJECT_ID/$REPO/mlops-iris-ii:$CI_COMMIT_SHORT_SHA
+    - export IMAGE_LATEST_TAG=$REGISTRY/$PROJECT_ID/$REPO/mlops-iris-ii:latest
   script:
-    - docker build -t $REGISTRY/$PROJECT_ID/$REPO/mlops-iris-ii:latest .
-    - docker push $REGISTRY/$PROJECT_ID/$REPO/mlops-iris-ii:latest
+    - docker build -t "$IMAGE_SHA_TAG" -t "$IMAGE_LATEST_TAG" .
+    - docker push "$IMAGE_SHA_TAG"
+    - docker push "$IMAGE_LATEST_TAG"
+  after_script:
+    - rm -f key.json
 
 deploy_to_gke:
+  image: google/cloud-sdk:latest
   stage: deploy
   before_script:
     - echo "$GCP_SA_KEY" | base64 -d > key.json
     - gcloud auth activate-service-account --key-file=key.json
-    - gcloud auth configure-docker $REGISTRY
-  script:
+    - gcloud config set project $PROJECT_ID
+    # Ensure kubectl & GKE auth plugin are present (no-ops if already included)
+    - gcloud components install kubectl gke-gcloud-auth-plugin -q || true
     - gcloud container clusters get-credentials $CLUSTER --region $REGION --project $PROJECT_ID
-    - kubectl apply -f kubernetes-deployment.yaml
+    - export IMAGE_SHA_TAG=$REGISTRY/$PROJECT_ID/$REPO/mlops-iris-ii:$CI_COMMIT_SHORT_SHA
+  script:
+    # Option 1 (recommended): update the image on the live Deployment without editing YAML
+    - kubectl set image deployment/mlops-iris-ii mlops-iris-ii="$IMAGE_SHA_TAG"
+    # Option 2: if you want to apply the YAML as-is (it uses :latest), just:
+    # - kubectl apply -f kubernetes-deployment.yaml
+  after_script:
+    - rm -f key.json
