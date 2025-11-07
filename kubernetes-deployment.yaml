@@ -1,20 +1,13 @@
-# -------------------------------------------------------------------
 # Kubernetes Deployment — MLOps Iris Classifier
-# -------------------------------------------------------------------
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: mlops-iris-ii
 spec:
-  # Number of pod replicas to run for high availability
   replicas: 2
-
-  # Match pods using this label selector
   selector:
     matchLabels:
       app: mlops-iris-ii
-
-  # Template describing the pod specification
   template:
     metadata:
       labels:
@@ -22,31 +15,25 @@ spec:
     spec:
       containers:
         - name: mlops-iris-ii
-          # Image hosted on Google Artifact Registry
           image: us-central1-docker.pkg.dev/sacred-garden-474511-b9/mlops-iris-ii/mlops-iris-ii:latest
-
-          # Expose the Flask app port
+          imagePullPolicy: Always
           ports:
             - containerPort: 5000
-
-
-# -------------------------------------------------------------------
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+---
 # Kubernetes Service — External Access via LoadBalancer
-# -------------------------------------------------------------------
 apiVersion: v1
 kind: Service
 metadata:
   name: mlops-service
 spec:
-  # Route traffic to pods matching this label
   selector:
     app: mlops-iris-ii
-
-  # Map external port 80 to internal container port 5000
   ports:
     - protocol: TCP
       port: 80
       targetPort: 5000
-
-  # Create a public-facing load balancer for external access
   type: LoadBalancer
